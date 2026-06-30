@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Companion</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+
+        body{
+            font-family:'Inter',sans-serif;
+            background:#111214;
+        }
+
+        h1,h2,.font-display{
+            font-family:'Plus Jakarta Sans',sans-serif;
+        }
+
+        ::-webkit-scrollbar{
+            width:6px;
+        }
+
+        ::-webkit-scrollbar-track{
+            background:transparent;
+        }
+
+        ::-webkit-scrollbar-thumb{
+            background:#2f3037;
+            border-radius:9999px;
+        }
+
+        pre{
+            background:#1e1f20;
+            padding:1rem;
+            border-radius:.5rem;
+            border:1px solid #2d2e30;
+            overflow-x:auto;
+            margin:.5rem 0;
+            font-family:monospace;
+        }
+
+        code{
+            font-family:monospace;
+            color:#f472b6;
+        }
+
+    </style>
+</head>
+
+<body class="text-gray-200 h-screen flex overflow-hidden relative">
+
+        <div id="password-gate" class="fixed inset-0 bg-[#131314] z-50 flex items-center justify-center overflow-hidden">
+
+                <div class="absolute inset-0">
+
+            <div class="absolute top-[-200px] left-[-150px] w-[500px] h-[500px] bg-purple-700/20 blur-[140px] rounded-full"></div>
+
+            <div class="absolute bottom-[-200px] right-[-150px] w-[500px] h-[500px] bg-indigo-700/20 blur-[140px] rounded-full"></div>
+
+        </div>
+
+                <div class="relative w-full max-w-md mx-4">
+
+            <div class="bg-[#1b1c1f]/90 backdrop-blur-2xl border border-[#2d2e30] rounded-[32px] p-10 shadow-2xl">
+
+                                <div class="flex justify-center mb-6">
+
+                    <div class="w-20 h-20 rounded-3xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-900/30">
+
+                        <i class="fa-solid fa-wand-magic-sparkles text-white text-3xl"></i>
+
+                    </div>
+
+                </div>
+
+                                <div class="text-center mb-8">
+
+                    <h1 class="text-3xl font-display font-bold text-white tracking-tight">
+                        COMPANION
+                    </h1>
+
+                    <p class="text-gray-400 text-sm mt-3 leading-relaxed">
+                        Secure access to your AI workspace.
+                    </p>
+
+                </div>
+
+                                <form onsubmit="verifyGatePin(event)" class="space-y-5">
+
+                    <input
+                        type="password"
+                        id="gate-pin-input"
+                        placeholder="Enter Access PIN"
+                        class="w-full bg-[#131314] border border-[#2d2e30] rounded-2xl py-4 px-5 text-gray-200 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all text-sm"
+                    >
+
+                    <p id="gate-error-msg" class="text-sm text-red-400 hidden text-center">
+                        Invalid Access PIN
+                    </p>
+
+                    <button
+                        type="submit"
+                        class="w-full bg-white hover:bg-gray-200 text-black font-semibold py-4 rounded-2xl transition-all duration-300 shadow-lg"
+                    >
+                        Continue
+                    </button>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+        <aside id="sidebar" class="w-64 bg-[#1e1f20] h-full flex flex-col justify-between transition-all duration-300 border-r border-[#2d2e30] z-20">
+
+        <div>
+
+            <div class="p-4 flex items-center justify-between">
+
+                <button onclick="toggleSidebar()" class="text-gray-400 hover:text-white p-2 rounded-lg hover:bg-[#2d2e30]">
+
+                    <i class="fa-solid fa-bars text-lg"></i>
+
+                </button>
+
+                <span class="font-display font-semibold text-sm tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 sidebar-text">
+                    COMPANION
+                </span>
+
+            </div>
+
+            <div class="px-3 mt-4">
+
+                <button onclick="clearChat()" class="w-full flex items-center gap-3 bg-[#2b2c2e] hover:bg-[#37393b] text-sm font-medium text-gray-200 py-3 px-4 rounded-full transition-colors shadow-sm">
+
+                    <i class="fa-solid fa-plus text-blue-400"></i>
+
+                    <span class="sidebar-text">
+                        New chat
+                    </span>
+
+                </button>
+
+            </div>
+
+            <div class="px-3 mt-6 sidebar-text">
+
+                <p class="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    Recent
+                </p>
+
+                <div id="recent-chats-list" class="space-y-1 overflow-y-auto max-h-[50vh]"></div>
+
+            </div>
+
+        </div>
+
+        <div class="p-3 border-t border-[#2d2e30] sidebar-text">
+
+            <button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-[#2b2c2e] rounded-lg transition-colors">
+
+                <i class="fa-regular fa-circle-question"></i>
+
+                <span>
+                    Help & Support
+                </span>
+
+            </button>
+
+            <button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-[#2b2c2e] rounded-lg transition-colors">
+
+                <i class="fa-solid fa-gear"></i>
+
+                <span>
+                    Settings
+                </span>
+
+            </button>
+
+        </div>
+
+    </aside>
+
+        <main class="flex-1 flex flex-col min-w-0 bg-[#131314]">
+
+                <header class="h-14 border-b border-[#2d2e30] flex items-center justify-between px-6 bg-[#131314]/80 backdrop-blur-md">
+
+            <div class="flex items-center gap-3">
+
+                <button onclick="toggleSidebar()" class="md:hidden text-gray-400 hover:text-white mr-2">
+
+                    <i class="fa-solid fa-bars"></i>
+
+                </button>
+
+                <div class="flex items-center gap-2">
+
+                    <select id="model-selector" class="bg-transparent text-gray-200 font-display font-medium text-sm focus:outline-none cursor-pointer hover:text-white">
+
+                        <option value="llama-3.1-8b-instant" class="bg-[#1e1f20]">
+                            Companion Light (Llama 3.1)
+                        </option>
+
+                        <option value="llama-3.3-70b-versatile" class="bg-[#1e1f20]">
+                            Companion Pro (Llama 3.3 Pro)
+                        </option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center text-xs font-bold text-white">
+                U
+            </div>
+
+        </header>
+
+                <section id="chat-feed" class="flex-1 overflow-y-auto py-8 px-4 sm:px-6">
+
+            <div class="max-w-3xl mx-auto space-y-8" id="chat-container">
+
+                <div id="welcome-screen" class="text-center py-12 space-y-4">
+
+                    <div class="inline-flex p-4 bg-[#1e1f20] rounded-3xl border border-[#2d2e30] text-purple-400 text-3xl mb-2 animate-pulse">
+
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+
+                    </div>
+
+                    <h2 class="text-2xl sm:text-3xl font-display font-semibold text-gray-100">
+                        What can I help with today?
+                    </h2>
+
+                    <p class="text-gray-400 max-w-md mx-auto text-sm leading-relaxed">
+                        Ask a question, write some code, or analyze complex tasks smoothly.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+                <footer class="p-4 bg-gradient-to-t from-[#131314] via-[#131314] to-transparent">
+
+            <div class="max-w-3xl mx-auto mb-2">
+
+                <form id="chat-form" onsubmit="handleSendMessage(event)" class="bg-[#1e1f20] border border-[#2d2e30] rounded-3xl p-3 focus-within:border-[#4d4d50] focus-within:ring-1 focus-within:ring-[#4d4d50] transition-all shadow-xl">
+
+                    <div class="flex items-end gap-2">
+
+                        <button type="button" class="text-gray-400 hover:text-gray-200 p-2 rounded-full hover:bg-[#2b2c2e] transition-colors mb-1">
+
+                            <i class="fa-solid fa-paperclip text-lg"></i>
+
+                        </button>
+
+                        <textarea id="user-input" rows="1" placeholder="Message Companion..." class="w-full bg-transparent text-gray-200 placeholder-gray-500 focus:outline-none resize-none py-2 px-1 max-h-48 text-base" oninput="autoGrow(this)"></textarea>
+
+                        <button type="submit" id="send-btn" class="bg-white text-black hover:bg-gray-200 w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-md mb-0.5">
+
+                            <i class="fa-solid fa-arrow-up text-md"></i>
+
+                        </button>
+
+                    </div>
+
+                </form>
+
+                <p class="text-center text-[11px] text-gray-500 mt-3">
+                    Companion can make mistakes. Verify important information.
+                </p>
+
+            </div>
+
+        </footer>
+
+    </main>
+
+<script>
+
+const chatContainer=document.getElementById('chat-container');
+
+const welcomeScreen=document.getElementById('welcome-screen');
+
+const userInput=document.getElementById('user-input');
+
+const modelSelector=document.getElementById('model-selector');
+
+const passwordGate=document.getElementById('password-gate');
+
+const gateErrorMsg=document.getElementById('gate-error-msg');
+
+const gatePinInput=document.getElementById('gate-pin-input');
+
+
+
+// PASSWORD
+
+const ACCESS_PASSWORD="LYx1954o2M6uf2qv/";
+
+
+
+// AUTO LOGIN CHECK
+
+if(localStorage.getItem('companion_beta_pin')===ACCESS_PASSWORD){
+
+    passwordGate.classList.add('hidden');
+
+}
+
+
+
+// VERIFY PASSWORD
+
+function verifyGatePin(event){
+
+    event.preventDefault();
+
+    const inputVal=gatePinInput.value.trim();
+
+    if(inputVal===ACCESS_PASSWORD){
+
+        localStorage.setItem('companion_beta_pin',inputVal);
+
+        passwordGate.classList.add('hidden');
+
+        gateErrorMsg.classList.add('hidden');
+
+    }else{
+
+        gateErrorMsg.classList.remove('hidden');
+
+        gatePinInput.value='';
+
+    }
+
+}
+
+
+
+function autoGrow(element){
+
+    element.style.height="5px";
+
+    element.style.height=(element.scrollHeight)+"px";
+
+}
+
+
+
+function toggleSidebar(){
+
+    const sidebar=document.getElementById('sidebar');
+
+    const sidebarTexts=document.querySelectorAll('.sidebar-text');
+
+    if(sidebar.classList.contains('w-64')){
+
+        sidebar.classList.remove('w-64');
+
+        sidebar.classList.add('w-16');
+
+        sidebarTexts.forEach(el=>el.classList.add('hidden'));
+
+    }else{
+
+        sidebar.classList.remove('w-16');
+
+        sidebar.classList.add('w-64');
+
+        sidebarTexts.forEach(el=>el.classList.remove('hidden'));
+
+    }
+
+}
+
+
+
+async function clearChat(){
+
+    await fetch('/api/clear',{
+
+        method:'POST'
+
+    });
+
+    chatContainer.innerHTML='';
+
+    chatContainer.appendChild(welcomeScreen);
+
+    welcomeScreen.classList.remove('hidden');
+
+}
+
+
+
+function parseFormatting(text){
+
+    return text.replace(
+
+        /```([\s\S]*?)```/g,
+
+        '<pre><code>$1</code></pre>'
+
+    );
+
+}
+
+
+
+async function handleSendMessage(event){
+
+    event.preventDefault();
+
+    const text=userInput.value.trim();
+
+    if(!text)return;
+
+    if(welcomeScreen){
+
+        welcomeScreen.classList.add('hidden');
+
+    }
+
+    appendMessage('user',text);
+
+    userInput.value='';
+
+    userInput.style.height='auto';
+
+    const targetBlockId=appendEmptyResponseNode();
+
+    const targetTextField=document.getElementById(targetBlockId);
+
+    try{
+
+        const response=await fetch('/api/chat',{
+
+            method:'POST',
+
+            headers:{
+
+                'Content-Type':'application/json',
+
+                'X-Companion-Pin':
+
+                localStorage.getItem('companion_beta_pin') || ""
+
+            },
+
+            body:JSON.stringify({
+
+                message:text,
+
+                model:modelSelector.value
+
+            })
+
+        });
+
+        if(!response.ok){
+
+            const errData=await response.json();
+
+            targetTextField.innerHTML=
+
+            `Access Refused: ${errData.error || "Verification failed."}`;
+
+            localStorage.removeItem('companion_beta_pin');
+
+            passwordGate.classList.remove('hidden');
+
+            return;
+
+        }
+
+        const reader=response.body.getReader();
+
+        const decoder=new TextDecoder();
+
+        let accumulatedText="";
+
+        while(true){
+
+            const {value,done}=await reader.read();
+
+            if(done)break;
+
+            const chunkStr=decoder.decode(value);
+
+            const lines=chunkStr.split('\n');
+
+            for(const line of lines){
+
+                if(line.startsWith('data: ')){
+
+                    const rawData=line.substring(6).trim();
+
+                    if(!rawData)continue;
+
+                    const parsed=JSON.parse(rawData);
+
+                    if(parsed.error){
+
+                        targetTextField.innerHTML=
+
+                        `Error running model calculations: ${parsed.error}`;
+
+                        return;
+
+                    }
+
+                    if(parsed.token){
+
+                        accumulatedText+=parsed.token;
+
+                        targetTextField.innerHTML=
+
+                        parseFormatting(accumulatedText);
+
+                        scrollToBottom();
+
+                    }
+
+                }
+
+                            }
+
+            }
+
+    }catch(err){
+
+        if(targetTextField){
+
+            targetTextField.innerHTML=
+
+            "Could not connect to operational backend.";
+
+        }
+
+    }
+
+}
+
+
+
+function appendMessage(role,text){
+
+    const msgWrapper=document.createElement('div');
+
+    msgWrapper.className=
+
+    `flex gap-4 p-4 rounded-2xl max-w-3xl mx-auto
+
+    ${role === 'user'
+
+    ? 'bg-[#2b2c2e]/40 justify-end ml-auto max-w-[85%]'
+
+    : 'mr-auto'}`;
+
+    msgWrapper.innerHTML=
+
+    `<div class="text-sm text-gray-200 leading-relaxed break-words">
+
+        ${text}
+
+    </div>`;
+
+    chatContainer.appendChild(msgWrapper);
+
+    scrollToBottom();
+
+}
+
+
+
+function appendEmptyResponseNode(){
+
+    const id='ai-stream-'+Date.now();
+
+    const msgWrapper=document.createElement('div');
+
+    msgWrapper.className=
+
+    'flex gap-4 p-4 max-w-3xl mx-auto mr-auto w-full';
+
+    msgWrapper.innerHTML=`
+
+        <div class="flex-shrink-0 w-7 h-7 rounded-full
+
+        bg-indigo-600 flex items-center justify-center
+
+        text-xs font-bold text-white shadow-md">
+
+            C
+
+        </div>
+
+        <div class="space-y-2 flex-1 min-w-0">
+
+            <p class="text-xs font-semibold
+
+            text-gray-400 tracking-wider">
+
+                COMPANION
+
+            </p>
+
+            <div id="${id}"
+
+            class="text-sm text-gray-300
+
+            leading-relaxed font-normal whitespace-pre-wrap">
+
+                ┃
+
+            </div>
+
+        </div>
+
+    `;
+
+    chatContainer.appendChild(msgWrapper);
+
+    scrollToBottom();
+
+    return id;
+
+}
+
+
+
+function scrollToBottom(){
+
+    const chatFeed=document.getElementById('chat-feed');
+
+    chatFeed.scrollTo({
+
+        top:chatFeed.scrollHeight
+
+    });
+
+}
+
+</script>
+
+</body>
+</html>
