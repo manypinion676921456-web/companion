@@ -9,7 +9,7 @@ app = Flask(__name__)
 app.secret_key = "super-secret-key-change-this-later"
 
 # Initialize Groq client
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+client = Groq(api_key=os.environ.get("GROQ_API_KEY", "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"))
 
 # Path to store our user credentials safely in a file
 DATA_FILE = "/tmp/users.json"
