@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sign Up - Companion AI</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #1e1e2e; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .signup-card { background: #252538; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-align: center; width: 300px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #444; background: #1e1e2e; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #00e676; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        a { color: #b388ff; text-decoration: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="signup-card">
+        <h2>Create Account</h2>
+        <form action="/signup" method="POST">
+            <input type="text" name="username" placeholder="Choose Username" required>
+            <input type="password" name="password" placeholder="Choose Password" required>
+            <button type="submit">Sign Up</button>
+        </form>
+        <p style="font-size: 14px; margin-top: 15px;">Already have an account? <a href="/login">Log In</a></p>
+    </div>
+</body>
+</html>
