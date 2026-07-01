@@ -1,5 +1,4 @@
 import os
-import sqlite3
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from groq import Groq
@@ -11,22 +10,8 @@ app.secret_key = "super-secret-key-change-this-later"
 # Initialize Groq client using your environment variable
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-# Database Setup Helper Function (Uses in-memory to prevent Render Free Tier disk errors)
-def init_db():
-    conn = sqlite3.connect(":memory:", check_same_thread=False)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL
-        )
-    ''')
-    conn.commit()
-    return conn
-
-# Initialize the global database connection
-db_conn = init_db()
+# Simple, reliable storage that works across Render's basic workers without crashing
+USERS_DB = {}
 
 # 1. Main Chat Interface (Protected: Redirects to login if not authenticated)
 @app.route('/')
@@ -39,17 +24,18 @@ def home():
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
-        username = request.form['username']
+        username = request.form['username'].strip()
         password = request.form['password']
-        hashed_password = generate_password_hash(password)
+        
+        if not username or not password:
+            return "Please fill out all fields."
 
-        try:
-            cursor = db_conn.cursor()
-            cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_password))
-            db_conn.commit()
-            return redirect(url_for('login'))
-        except sqlite3.IntegrityError:
+        if username in USERS_DB:
             return "Username already exists! Try a different one."
+        
+        # Securely hash password and save it
+        USERS_DB[username] = generate_password_hash(password)
+        return redirect(url_for('login'))
             
     return render_template('signup.html')
 
@@ -57,14 +43,12 @@ def signup():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form['username']
+        username = request.form['username'].strip()
         password = request.form['password']
 
-        cursor = db_conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
-        user = cursor.fetchone()
+        hashed_password = USERS_DB.get(username)
 
-        if user and check_password_hash(user[2], password):
+        if hashed_password and check_password_hash(hashed_password, password):
             session["user"] = username # Save session cookie
             return redirect(url_for('home'))
         else:
@@ -86,17 +70,22 @@ def chat():
 
     user_message = request.json.get("message")
     
-    # AI Query using Llama 3.3
-    completion = client.chat.completions.create(
-        model="llama-3.3-70b-specdec",
-        messages=[
-            {"role": "system", "content": "You are a helpful and intelligent AI companion."},
-            {"role": "user", "content": user_message}
-        ]
-    )
-    
-    ai_response = completion.choices[0].message.content
-    return jsonify({"response": ai_response})
+    if not user_message:
+        return jsonify({"error": "No message provided"}), 400
+
+    try:
+        # AI Query using Llama 3.3
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-specdec",
+            messages=[
+                {"role": "system", "content": "You are a helpful and intelligent AI companion."},
+                {"role": "user", "content": user_message}
+            ]
+        )
+        ai_response = completion.choices[0].message.content
+        return jsonify({"response": ai_response})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
