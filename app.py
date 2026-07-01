@@ -1,76 +1,104 @@
 import os
-import json
-from flask import Flask, render_template, request, Response, jsonify
+import sqlite3
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from werkzeug.security import generate_password_hash, check_password_hash
 from groq import Groq
 
 app = Flask(__name__)
+app.secret_key = "super-secret-key-change-this-later" # Keeps logins secure
 
-# Hardcoded API Key to bypass PowerShell environment variable bugs entirely
-client = Groq()
-# In-memory storage for basic chat memory tracking
-chat_memories = {}
+# Initialize Groq client
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/api/clear', methods=['POST'])
-def clear_chat():
-    chat_memories.clear()
-    return jsonify({"status": "success", "message": "Conversation history cleared."})
-
-@app.route('/api/chat', methods=['POST'])
-def chat():
-    try:
-        data = request.json or {}
-        user_message = data.get("message", "").strip()
-        
-        # Pulls dynamic model name chosen from the HTML dropdown
-        # Defaults to the active Llama 3.1 8B if missing
-        chosen_model = data.get("model", "llama-3.1-8b-instant")
-
-        if not user_message:
-            return jsonify({"error": "Empty message string received."}), 400
-
-        # Set up a generic chat stream context if it doesn't exist yet
-        if "active_user" not in chat_memories:
-            chat_memories["active_user"] = [
-                {"role": "system", "content": "You are Companion, a highly capable AI assistant."}
-            ]
-
-        chat_memories["active_user"].append({"role": "user", "content": user_message})
-
-        # Request a real-time streaming text completion from Groq
-        completion = client.chat.completions.create(
-            model=chosen_model,
-            messages=chat_memories["active_user"],
-            temperature=0.7,
-            max_tokens=2048,
-            stream=True
+# Database Setup Helper Function
+def init_db():
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
         )
+    ''')
+    conn.commit()
+    conn.close()
 
-        def generate_stream():
-            assistant_reply = ""
-            try:
-                for chunk in completion:
-                    # Capture the token fragment safely
-                    token = chunk.choices[0].delta.content
-                    if token:
-                        assistant_reply += token
-                        # Package token into a Server-Sent Events (SSE) format data line
-                        yield f"data: {json.dumps({'token': token})}\n\n"
-                
-                # Append finalized full assistant answer into context memory
-                chat_memories["active_user"].append(
-                    {"role": "assistant", "content": assistant_reply}
-                )
-            except Exception as stream_err:
-                yield f"data: {json.dumps({'error': str(stream_err)})}\n\n"
+# Run database creation
+init_db()
 
-        return Response(generate_stream(), mimetype='text/event-stream')
+# Main Chat Interface (Protected)
+@app.route('/')
+def home():
+    if "user" not in session:
+        return redirect(url_for('login')) # Send to login if not signed in
+    return render_template('index.html', username=session["user"])
 
-    except Exception as e:
-        return jsonify({"error": f"Backend processing failure: {str(e)}"}), 500
+# Sign Up Route
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        hashed_password = generate_password_hash(password)
+
+        try:
+            conn = sqlite3.connect("database.db")
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_password))
+            conn.commit()
+            conn.close()
+            return redirect(url_for('login'))
+        except sqlite3.IntegrityError:
+            return "Username already exists! Try a different one."
+            
+    return render_template('signup.html')
+
+# Log In Route
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        conn = sqlite3.connect("database.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+        user = cursor.fetchone()
+        conn.close()
+
+        if user and check_password_hash(user[2], password):
+            session["user"] = username # Save user session data
+            return redirect(url_for('home'))
+        else:
+            return "Invalid username or password!"
+
+    return render_template('login.html')
+
+# Log Out Route
+@app.route('/logout')
+def logout():
+    session.pop("user", None)
+    return redirect(url_for('login'))
+
+# AI Message Processing Endpoint
+@app.route('/chat', methods=['POST'])
+def chat():
+    if "user" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    user_message = request.json.get("message")
+    
+    completion = client.chat.completions.create(
+        model="llama-3.3-70b-specdec",
+        messages=[
+            {"role": "system", "content": "You are a helpful and intelligent AI companion."},
+            {"role": "user", "content": user_message}
+        ]
+    )
+    
+    ai_response = completion.choices[0].message.content
+    return jsonify({"response": ai_response})
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True)
