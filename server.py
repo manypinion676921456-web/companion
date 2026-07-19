@@ -14,8 +14,21 @@ from pydantic import BaseModel
 from avcore import Avcore
 from store import MemoryStore
 from training_data import save_correction, correction_count
-from youtube import search_youtube
-from microsoft import get_recent_emails, get_upcoming_events
+
+# Tool imports are optional — a missing dependency or unset API key for one
+# tool should never take down chat/memory, which don't need them at all.
+try:
+    from youtube import search_youtube
+except Exception as e:
+    print(f"[warning] YouTube tool unavailable: {e}")
+    search_youtube = None
+
+try:
+    from microsoft import get_recent_emails, get_upcoming_events
+except Exception as e:
+    print(f"[warning] Microsoft tool unavailable: {e}")
+    get_recent_emails = None
+    get_upcoming_events = None
 
 app = FastAPI(title="Companion Core")
 
@@ -70,16 +83,22 @@ def train_correction(req: CorrectionRequest):
 
 @app.get("/tools/youtube/search")
 def youtube_search(q: str, max_results: int = 5):
+    if search_youtube is None:
+        return {"error": "YouTube tool not available — check msal/dependencies are installed."}
     return {"results": search_youtube(q, max_results)}
 
 
 @app.get("/tools/microsoft/emails")
 def microsoft_emails(limit: int = 5):
+    if get_recent_emails is None:
+        return {"error": "Microsoft tool not available — check msal is installed."}
     return {"results": get_recent_emails(limit)}
 
 
 @app.get("/tools/microsoft/events")
 def microsoft_events(limit: int = 5):
+    if get_upcoming_events is None:
+        return {"error": "Microsoft tool not available — check msal is installed."}
     return {"results": get_upcoming_events(limit)}
 
 
